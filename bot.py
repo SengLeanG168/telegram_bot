@@ -27,7 +27,7 @@ app = Flask(__name__)
 # ===== MENU BUTTONS =====
 def set_bot_menu():
     commands = [
-        types.BotCommand("start"),
+        types.BotCommand("start","ចាប់ផ្ដើម"),
         types.BotCommand("contact", "ទំនាក់ទំនង"),
         types.BotCommand("about", "អំពី bot")
     ]
@@ -131,3 +131,4 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
