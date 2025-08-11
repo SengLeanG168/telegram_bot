@@ -3,16 +3,15 @@ import io
 import logging
 from flask import Flask, request
 import telebot
+from telebot import types
 from PIL import Image
 import pytesseract
+import requests
 
 # ===== CONFIGURATION =====
-API_TOKEN = os.environ.get("API_TOKEN", "7140415265:AAEW1So3c-z2fKiEduqsV8j9Z2uV2JWi5So")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://telegram-bot.onrender.com")  # e.g. https://your-app.onrender.com
-TESSERACT_CMD = os.environ.get("TESSERACT_CMD")  # optional: path to tesseract binary
-
-if not API_TOKEN:
-    raise ValueError("Please set the API_TOKEN environment variable.")
+API_TOKEN = "7140415265:AAEW1So3c-z2fKiEduqsV8j9Z2uV2JWi5So"
+WEBHOOK_URL = "https://telegram-bot.onrender.com"
+TESSERACT_CMD = os.environ.get("TESSERACT_CMD")  # optional
 
 if TESSERACT_CMD:
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
@@ -24,6 +23,17 @@ logger = logging.getLogger(__name__)
 # Bot + Flask
 bot = telebot.TeleBot(API_TOKEN, threaded=False)
 app = Flask(__name__)
+
+# ===== SETUP MENU BUTTONS =====
+def set_bot_menu():
+    commands = [
+        types.BotCommand("start", "សូមស្វាគមន៍"),
+        types.BotCommand("contact", "ទំនាក់ទំនង"),
+        types.BotCommand("about", "អំពី bot")
+    ]
+    bot.set_my_commands(commands)
+
+set_bot_menu()
 
 # ===== COMMAND HANDLERS =====
 @bot.message_handler(commands=['start'])
@@ -66,7 +76,6 @@ def ocr_image(message):
         downloaded = bot.download_file(file_info.file_path)
         img = Image.open(io.BytesIO(downloaded)).convert("RGB")
 
-        # OCR Khmer + English
         text = pytesseract.image_to_string(img, lang="khm+eng", config="--psm 6")
 
         if text.strip():
@@ -85,7 +94,9 @@ def ocr_image(message):
 # ===== FLASK WEBHOOK =====
 @app.route(f"/webhook/{API_TOKEN}", methods=['POST'])
 def webhook():
+    logger.info("Webhook called!")
     json_str = request.get_data().decode("utf-8")
+    logger.info(f"Update JSON: {json_str}")
     update = telebot.types.Update.de_json(json_str)
     bot.process_new_updates([update])
     return "OK", 200
@@ -95,9 +106,18 @@ def home():
     return "Telegram OCR Bot is running."
 
 if __name__ == "__main__":
-    if WEBHOOK_URL:
+    try:
+        # Remove old webhook and set new one
         bot.remove_webhook()
-        bot.set_webhook(url=f"{WEBHOOK_URL}/webhook/{API_TOKEN}")
-        print(f"Webhook set to {WEBHOOK_URL}/webhook/{API_TOKEN}")
+        full_webhook_url = f"{WEBHOOK_URL}/webhook/{API_TOKEN}"
+        result = bot.set_webhook(url=full_webhook_url)
+        logger.info(f"Setting webhook to {full_webhook_url} -> {result}")
+
+        # Force setWebhook via Telegram API (debug)
+        resp = requests.get(f"https://api.telegram.org/bot{API_TOKEN}/setWebhook", params={"url": full_webhook_url})
+        logger.info(f"Telegram API setWebhook response: {resp.text}")
+    except Exception as e:
+        logger.exception(f"Failed to set webhook: {e}")
+
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
