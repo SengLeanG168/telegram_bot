@@ -8,7 +8,7 @@ import pytesseract
 
 # ===== CONFIGURATION =====
 API_TOKEN = os.environ.get("API_TOKEN", "7140415265:AAEW1So3c-z2fKiEduqsV8j9Z2uV2JWi5So")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")  # e.g. https://your-app.onrender.com
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://telegram-bot.onrender.com")  # e.g. https://your-app.onrender.com
 TESSERACT_CMD = os.environ.get("TESSERACT_CMD")  # optional: path to tesseract binary
 
 if not API_TOKEN:
