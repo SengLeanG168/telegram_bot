@@ -1,33 +1,33 @@
 import os
 import io
 import logging
+import requests
 from flask import Flask, request
 import telebot
 from telebot import types
 from PIL import Image
 import pytesseract
-import requests
 
 # ===== CONFIGURATION =====
 API_TOKEN = "7140415265:AAEW1So3c-z2fKiEduqsV8j9Z2uV2JWi5So"
 WEBHOOK_URL = "https://telegram-bot.onrender.com"
-TESSERACT_CMD = os.environ.get("TESSERACT_CMD")  # optional
+TESSERACT_CMD = os.environ.get("TESSERACT_CMD")  # optional: path to tesseract binary
 
 if TESSERACT_CMD:
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
-# Logging
+# ===== LOGGING =====
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Bot + Flask
+# ===== INIT BOT & FLASK =====
 bot = telebot.TeleBot(API_TOKEN, threaded=False)
 app = Flask(__name__)
 
-# ===== SETUP MENU BUTTONS =====
+# ===== MENU BUTTONS =====
 def set_bot_menu():
     commands = [
-        types.BotCommand("start", "សូមស្វាគមន៍"),
+        types.BotCommand("start"),
         types.BotCommand("contact", "ទំនាក់ទំនង"),
         types.BotCommand("about", "អំពី bot")
     ]
@@ -76,6 +76,7 @@ def ocr_image(message):
         downloaded = bot.download_file(file_info.file_path)
         img = Image.open(io.BytesIO(downloaded)).convert("RGB")
 
+        # OCR Khmer + English
         text = pytesseract.image_to_string(img, lang="khm+eng", config="--psm 6")
 
         if text.strip():
@@ -105,17 +106,26 @@ def webhook():
 def home():
     return "Telegram OCR Bot is running."
 
+# ===== MAIN =====
 if __name__ == "__main__":
     try:
-        # Remove old webhook and set new one
         bot.remove_webhook()
         full_webhook_url = f"{WEBHOOK_URL}/webhook/{API_TOKEN}"
         result = bot.set_webhook(url=full_webhook_url)
         logger.info(f"Setting webhook to {full_webhook_url} -> {result}")
 
         # Force setWebhook via Telegram API (debug)
-        resp = requests.get(f"https://api.telegram.org/bot{API_TOKEN}/setWebhook", params={"url": full_webhook_url})
+        resp = requests.get(
+            f"https://api.telegram.org/bot{API_TOKEN}/setWebhook",
+            params={"url": full_webhook_url}
+        )
         logger.info(f"Telegram API setWebhook response: {resp.text}")
+
+        # Check webhook info
+        info = requests.get(
+            f"https://api.telegram.org/bot{API_TOKEN}/getWebhookInfo"
+        ).text
+        logger.info(f"Webhook info: {info}")
     except Exception as e:
         logger.exception(f"Failed to set webhook: {e}")
 

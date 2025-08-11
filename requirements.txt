@@ -3,3 +3,4 @@ Flask
 pytesseract
 Pillow
 gunicorn
+requests
