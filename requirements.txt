@@ -1,0 +1,5 @@
+pyTelegramBotAPI
+Flask
+pytesseract
+Pillow
+gunicorn
